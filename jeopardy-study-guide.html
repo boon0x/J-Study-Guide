@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeopardy! Study Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #060CE9;
+    --gold: #FFD700;
+    --dark-blue: #020880;
+    --light-blue: #1a1eff;
+    --white: #F5F0E8;
+    --correct: #00C851;
+    --wrong: #ff4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--dark-blue);
+    color: var(--white);
+    font-family: 'Merriweather', serif;
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(ellipse at 20% 50%, rgba(6,12,233,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(255,215,0,0.08) 0%, transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.02) 60px, rgba(255,255,255,0.02) 61px);
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin-top: 20px;
+  }
+  .logo {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 700;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(255,215,0,0.4), 4px 4px 0px rgba(0,0,0,0.5);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--white); }
+  .subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: rgba(255,215,0,0.6);
+    margin-top: 6px;
+  }
+
+  .nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .nav-btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border: 2px solid rgba(255,215,0,0.4);
+    background: transparent;
+    color: var(--white);
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .nav-btn:hover, .nav-btn.active {
+    background: var(--gold);
+    color: var(--dark-blue);
+    border-color: var(--gold);
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ===== BOARD SECTION ===== */
+  .board-wrap { overflow-x: auto; padding-bottom: 10px; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    min-width: 600px;
+  }
+  .category-header {
+    background: var(--blue);
+    border: 2px solid rgba(255,215,0,0.3);
+    text-align: center;
+    padding: 14px 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--white);
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .clue-cell {
+    background: var(--blue);
+    border: 2px solid rgba(255,215,0,0.2);
+    text-align: center;
+    padding: 16px 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .clue-cell:hover { background: var(--light-blue); transform: scale(1.02); border-color: var(--gold); }
+  .clue-cell.answered { background: #020355; color: #020355; cursor: default; border-color: transparent; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--blue);
+    border: 3px solid var(--gold);
+    max-width: 600px;
+    width: 100%;
+    padding: 40px;
+    text-align: center;
+    position: relative;
+    animation: modalIn 0.25s ease;
+    box-shadow: 0 0 60px rgba(255,215,0,0.2);
+  }
+  @keyframes modalIn {
+    from { transform: scale(0.9) translateY(-20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .modal-category {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .modal-value {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2rem;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 24px;
+  }
+  .modal-clue {
+    font-size: 1.2rem;
+    line-height: 1.7;
+    color: var(--white);
+    margin-bottom: 30px;
+    font-style: italic;
+  }
+  .modal-answer-area { display: none; }
+  .modal-answer-area.show { display: block; }
+  .answer-reveal {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,215,0,0.3);
+    padding: 16px;
+    margin-bottom: 20px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+  }
+  .answer-label {
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 6px;
+  }
+  .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 28px;
+    border: 2px solid;
+    cursor: pointer;
+    transition: all 0.15s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  }
+  .btn-gold { border-color: var(--gold); background: var(--gold); color: var(--dark-blue); }
+  .btn-gold:hover { background: #ffe44d; }
+  .btn-outline { border-color: rgba(255,255,255,0.4); background: transparent; color: var(--white); }
+  .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,0.1); }
+  .btn-correct { border-color: var(--correct); background: var(--correct); color: #fff; }
+  .btn-wrong { border-color: var(--wrong); background: var(--wrong); color: #fff; }
+  .modal-close {
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: rgba(255,255,255,0.4);
+    background: none;
+    border: none;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--white); }
+
+  /* Score */
+  .score-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,215,0,0.2);
+    margin-bottom: 16px;
+    font-family: 'Oswald', sans-serif;
+  }
+  .score-val { font-size: 1.8rem; color: var(--gold); font-weight: 700; }
+  .score-label { font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+  .score-reset { font-family: 'Oswald', sans-serif; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; }
+  .score-reset:hover { color: var(--white); border-color: var(--white); }
+
+  /* ===== TIPS SECTION ===== */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .tip-card {
+    background: rgba(6,12,233,0.3);
+    border: 1px solid rgba(255,215,0,0.25);
+    border-left: 4px solid var(--gold);
+    padding: 24px;
+  }
+  .tip-card h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .tip-card p, .tip-card li {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(255,240,200,0.85);
+  }
+  .tip-card ul { padding-left: 16px; }
+  .tip-card li { margin-bottom: 6px; }
+
+  /* ===== FLASH CARDS ===== */
+  .flash-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .flash-select {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,215,0,0.4);
+    color: var(--white);
+    padding: 10px 14px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 160px;
+  }
+  .flash-select option { background: #020880; }
+  .flash-card-wrap {
+    perspective: 1000px;
+    height: 280px;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  .flash-card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+  }
+  .flash-card.flipped { transform: rotateY(180deg); }
+  .flash-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+    border: 2px solid rgba(255,215,0,0.3);
+  }
+  .flash-front { background: var(--blue); }
+  .flash-back { background: #040a5e; transform: rotateY(180deg); }
+  .flash-face-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255,215,0,0.5);
+    margin-bottom: 16px;
+  }
+  .flash-text {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    font-style: italic;
+  }
+  .flash-answer {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+    margin-top: 12px;
+  }
+  .flash-hint { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 20px; }
+  .flash-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .flash-count {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    color: rgba(255,215,0,0.7);
+  }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+    border-bottom: 2px solid rgba(255,215,0,0.2);
+    padding-bottom: 10px;
+  }
+  .section-desc {
+    font-size: 0.85rem;
+    color: rgba(255,240,200,0.6);
+    margin-bottom: 20px;
+  }
+
+  /* feedback flash */
+  .feedback {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    border-radius: 2px;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .feedback.correct { background: var(--correct); color: white; }
+  .feedback.wrong { background: var(--wrong); color: white; }
+  .feedback.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Jeopardy<span>!</span> Study Guide</div>
+  <div class="subtitle">Anytime Test Prep</div>
+</header>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showSection('board')">Practice Board</button>
+  <button class="nav-btn" onclick="showSection('flash')">Flash Cards</button>
+  <button class="nav-btn" onclick="showSection('tips')">Strategy Tips</button>
+</nav>
+
+<div class="container">
+
+  <!-- BOARD SECTION -->
+  <div id="section-board" class="section active">
+    <div class="score-bar">
+      <div>
+        <div class="score-label">Your Score</div>
+        <div class="score-val" id="score-display">$0</div>
+      </div>
+      <div>
+        <div class="score-label">Correct / Attempted</div>
+        <div class="score-val" id="ratio-display">0 / 0</div>
+      </div>
+      <button class="score-reset" onclick="resetBoard()">Reset Board</button>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="game-board"></div>
+    </div>
+  </div>
+
+  <!-- FLASH CARDS SECTION -->
+  <div id="section-flash" class="section">
+    <div class="section-title">Flash Cards</div>
+    <div class="section-desc">Drill high-frequency Jeopardy! knowledge. Click a card to flip it.</div>
+    <div class="flash-controls">
+      <select class="flash-select" id="flash-category" onchange="loadFlash()">
+        <option value="all">All Categories</option>
+        <option value="potus">U.S. Presidents</option>
+        <option value="science">Science & Nature</option>
+        <option value="wordplay">Word Play & Language</option>
+        <option value="geography">World Geography</option>
+        <option value="literature">Literature & Authors</option>
+        <option value="history">World History</option>
+      </select>
+      <button class="btn btn-gold" onclick="shuffleFlash()">Shuffle</button>
+    </div>
+    <div class="flash-card-wrap" onclick="flipFlash()">
+      <div class="flash-card" id="flash-card">
+        <div class="flash-face flash-front">
+          <div class="flash-face-label">Clue</div>
+          <div class="flash-text" id="flash-clue"></div>
+          <div class="flash-hint">tap to reveal answer</div>
+        </div>
+        <div class="flash-face flash-back">
+          <div class="flash-face-label">Answer</div>
+          <div class="flash-text" id="flash-q"></div>
+          <div class="flash-answer" id="flash-ans"></div>
+        </div>
+      </div>
+    </div>
+    <div class="flash-nav">
+      <button class="btn btn-outline" onclick="prevFlash()">← Prev</button>
+      <div class="flash-count" id="flash-count">1 / 1</div>
+      <button class="btn btn-gold" onclick="nextFlash()">Next →</button>
+    </div>
+  </div>
+
+  <!-- TIPS SECTION -->
+  <div id="section-tips" class="section">
+    <div class="section-title">Strategy & Test Tips</div>
+    <div class="section-desc">What Jeopardy! contestants and researchers have found most useful.</div>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <h3>Answer Format</h3>
+        <p>Always phrase your response as a question: <em>"What is...?" / "Who is...?"</em> On the Anytime test, read carefully — some questions award partial credit for the right name even without the question framing, but always practice the format to build the habit.</p>
+      </div>
+      <div class="tip-card">
+        <h3>High-Value Categories</h3>
+        <ul>
+          <li>U.S. & World Geography</li>
+          <li>American & World History</li>
+          <li>Science (especially biology & astronomy)</li>
+          <li>Classic Literature & Authors</li>
+          <li>Word origins / Potpourri</li>
+          <li>Pop Culture (especially 80s–2000s)</li>
+        </ul>
+      </div>
+      <div class="tip-card">
+        <h3>Reading Clues Quickly</h3>
+        <p>Look for the category name first — it often tells you the answer's domain or format. Key signifier words like <em>"this element," "this author,"</em> or <em>"this capital"</em> clue the answer type. Read to the end before locking in.</p>
+      </div>
+      <div class="tip-card">
+        <h3>The Anytime Test</h3>
+        <p>The test is 50 questions, untimed per question, over a rolling window. Strong performance usually means ~35+ correct. The test draws heavily from classic Jeopardy! categories and avoids very obscure niche topics. Speed matters — practice recalling quickly.</p>
+      </div>
+      <div class="tip-card">
+        <h3>Building Knowledge Fast</h3>
+        <ul>
+          <li>J! Archive (j-archive.com) — searchable real game clues</li>
+          <li>Wikipedia Featured Articles — excellent breadth</li>
+          <li>U.S. state capitals & world capitals</li>
+          <li>Nobel Prize winners (especially Literature & Peace)</li>
+          <li>Periodic table of elements (first 30 by symbol)</li>
+        </ul>
+      </div>
+      <div class="tip-card">
+        <h3>Common Traps</h3>
+        <ul>
+          <li>Don't confuse "first" with "most famous" — clues often ask for the <em>first</em> person to do something</li>
+          <li>Author clues: know both the author AND major works</li>
+          <li>"Biblical" clues may be from the Old or New Testament</li>
+          <li>Double Jeopardy! categories often have a twist in their theme</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div class="modal-category" id="modal-category"></div>
+    <div class="modal-value" id="modal-value"></div>
+    <div class="modal-clue" id="modal-clue"></div>
+    <div class="btn-row" id="modal-btn-row">
+      <button class="btn btn-gold" onclick="revealAnswer()">Reveal Answer</button>
+    </div>
+    <div class="modal-answer-area" id="modal-answer-area">
+      <div class="answer-label">Correct Response</div>
+      <div class="answer-reveal" id="modal-answer"></div>
+      <div class="btn-row">
+        <button class="btn btn-correct" onclick="markResult(true)">✓ Got It</button>
+        <button class="btn btn-wrong" onclick="markResult(false)">✗ Missed It</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="feedback" id="feedback"></div>
+
+<script>
+// ===================== DATA =====================
+const boardData = {
+  categories: [
+    "U.S. History",
+    "Science & Nature",
+    "World Capitals",
+    "Literature",
+    "Mythology",
+    "Pot Pourri"
+  ],
+  clues: [
+    // U.S. History
+    [
+      { v:200, clue:"He was the only U.S. president to serve two non-consecutive terms.", ans:"Who is Grover Cleveland?" },
+      { v:400, clue:"This 1803 purchase from France roughly doubled the size of the United States.", ans:"What is the Louisiana Purchase?" },
+      { v:600, clue:"The Emancipation Proclamation was issued on January 1st of this year.", ans:"What is 1863?" },
+      { v:800, clue:"This landmark 1954 Supreme Court case ruled racial segregation in public schools unconstitutional.", ans:"What is Brown v. Board of Education?" },
+      { v:1000, clue:"He was the first U.S. Secretary of the Treasury.", ans:"Who is Alexander Hamilton?" },
+    ],
+    // Science & Nature
+    [
+      { v:200, clue:"The chemical symbol for gold.", ans:"What is Au?" },
+      { v:400, clue:"This is the closest star to our solar system.", ans:"What is Proxima Centauri?" },
+      { v:600, clue:"The process by which plants convert sunlight into sugar.", ans:"What is photosynthesis?" },
+      { v:800, clue:"This scientist proposed the theory of general relativity.", ans:"Who is Albert Einstein?" },
+      { v:1000, clue:"The powerhouse of the cell, it produces most of the cell's ATP.", ans:"What is the mitochondria?" },
+    ],
+    // World Capitals
+    [
+      { v:200, clue:"The capital of Australia.", ans:"What is Canberra?" },
+      { v:400, clue:"This city serves as the capital of Canada.", ans:"What is Ottawa?" },
+      { v:600, clue:"Naypyidaw replaced Rangoon as this country's capital in 2006.", ans:"What is Myanmar (Burma)?" },
+      { v:800, clue:"This landlocked African nation's capital is Ouagadougou.", ans:"What is Burkina Faso?" },
+      { v:1000, clue:"Nur-Sultan, now renamed Astana, is the capital of this Central Asian country.", ans:"What is Kazakhstan?" },
+    ],
+    // Literature
+    [
+      { v:200, clue:"He wrote 'The Raven' and 'The Tell-Tale Heart.'", ans:"Who is Edgar Allan Poe?" },
+      { v:400, clue:"This Dickens novel begins: 'It was the best of times, it was the worst of times.'", ans:"What is A Tale of Two Cities?" },
+      { v:600, clue:"The fictional detective Hercule Poirot was created by this author.", ans:"Who is Agatha Christie?" },
+      { v:800, clue:"In this Homer epic, Odysseus takes ten years to return home from Troy.", ans:"What is The Odyssey?" },
+      { v:1000, clue:"This novel by Gabriel García Márquez chronicles seven generations of the Buendía family.", ans:"What is One Hundred Years of Solitude?" },
+    ],
+    // Mythology
+    [
+      { v:200, clue:"The Greek god of the sun who drove a chariot across the sky each day.", ans:"Who is Apollo?" },
+      { v:400, clue:"In Greek mythology, she opened a box releasing all the evils of the world.", ans:"Who is Pandora?" },
+      { v:600, clue:"This Roman god of the sea is the equivalent of the Greek Poseidon.", ans:"Who is Neptune?" },
+      { v:800, clue:"Achilles was said to be invulnerable everywhere except this body part.", ans:"What is his heel?" },
+      { v:1000, clue:"In Greek mythology, this king of Phrygia was cursed so that everything he touched turned to gold.", ans:"Who is King Midas?" },
+    ],
+    // Pot Pourri
+    [
+      { v:200, clue:"The number of sides on a hexagon.", ans:"What is six?" },
+      { v:400, clue:"This Italian city is built on a series of islands connected by canals.", ans:"What is Venice?" },
+      { v:600, clue:"She painted 'The Two Fridas' and 'Self-Portrait with Thorn Necklace.'", ans:"Who is Frida Kahlo?" },
+      { v:800, clue:"In music, this Italian term means to play very softly.", ans:"What is pianissimo (pp)?" },
+      { v:1000, clue:"This element, atomic number 79, is represented by the symbol Au from the Latin 'aurum.'", ans:"What is gold?" },
+    ],
+  ]
+};
+
+// Flash card data
+const flashDecks = {
+  potus: [
+    { clue:"He was the youngest person to become U.S. president, taking office at age 42 after McKinley's assassination.", ans:"Theodore Roosevelt" },
+    { clue:"This president signed the Civil Rights Act of 1964.", ans:"Lyndon B. Johnson" },
+    { clue:"He served as president during World War II and made the decision to use atomic bombs on Japan.", ans:"Harry S. Truman" },
+    { clue:"The first president to resign from office.", ans:"Richard Nixon" },
+    { clue:"He was president during the Cuban Missile Crisis of 1962.", ans:"John F. Kennedy" },
+    { clue:"This president's 'New Deal' programs were a response to the Great Depression.", ans:"Franklin D. Roosevelt" },
+    { clue:"He delivered the Gettysburg Address in November 1863.", ans:"Abraham Lincoln" },
+    { clue:"First U.S. president to visit China while in office.", ans:"Richard Nixon" },
+  ],
+  science: [
+    { clue:"This planet has the most moons in our solar system.", ans:"Saturn" },
+    { clue:"The chemical formula for water.", ans:"H₂O" },
+    { clue:"This British naturalist wrote 'On the Origin of Species' in 1859.", ans:"Charles Darwin" },
+    { clue:"The unit of electrical resistance.", ans:"Ohm" },
+    { clue:"This bone is the longest in the human body.", ans:"The femur (thigh bone)" },
+    { clue:"DNA stands for this.", ans:"Deoxyribonucleic acid" },
+    { clue:"She won Nobel Prizes in both Physics (1903) and Chemistry (1911).", ans:"Marie Curie" },
+    { clue:"The speed of light is approximately this many miles per second.", ans:"186,000 miles per second" },
+  ],
+  wordplay: [
+    { clue:"A word that reads the same forwards and backwards.", ans:"Palindrome" },
+    { clue:"The rhetorical device of repeating initial consonant sounds: 'Peter Piper picked...'", ans:"Alliteration" },
+    { clue:"A word formed from the initial letters of other words, like NASA or NATO.", ans:"Acronym" },
+    { clue:"An extreme exaggeration used for effect, like 'I've told you a million times.'", ans:"Hyperbole" },
+    { clue:"A word that imitates the sound it describes, like 'buzz' or 'sizzle.'", ans:"Onomatopoeia" },
+    { clue:"The word 'suitcase' is an example of this, two words combined to form a new one.", ans:"Compound word" },
+  ],
+  geography: [
+    { clue:"The world's largest country by land area.", ans:"Russia" },
+    { clue:"The Amazon River flows through this country before emptying into the Atlantic.", ans:"Brazil" },
+    { clue:"The smallest country in the world by area.", ans:"Vatican City" },
+    { clue:"This sea lies between Europe and Africa.", ans:"The Mediterranean Sea" },
+    { clue:"The Sahara Desert spans most of this continent.", ans:"Africa" },
+    { clue:"This mountain range separates Europe from Asia.", ans:"The Ural Mountains" },
+    { clue:"The capital of Australia (not Sydney!).", ans:"Canberra" },
+    { clue:"Lake Baikal, the world's deepest lake, is in this country.", ans:"Russia" },
+  ],
+  literature: [
+    { clue:"He wrote 'To Kill a Mockingbird.'", ans:"Harper Lee" },
+    { clue:"This Shakespeare play features the line 'To be, or not to be.'", ans:"Hamlet" },
+    { clue:"The author of '1984' and 'Animal Farm.'", ans:"George Orwell" },
+    { clue:"This Russian author wrote 'War and Peace.'", ans:"Leo Tolstoy" },
+    { clue:"The subtitle of Mary Shelley's 'Frankenstein.'", ans:"The Modern Prometheus" },
+    { clue:"J.D. Salinger's famous coming-of-age novel narrated by Holden Caulfield.", ans:"The Catcher in the Rye" },
+    { clue:"This French author wrote 'Les Misérables.'", ans:"Victor Hugo" },
+    { clue:"The first novel in Tolkien's Lord of the Rings trilogy.", ans:"The Fellowship of the Ring" },
+  ],
+  history: [
+    { clue:"He was the first emperor of Rome.", ans:"Augustus (Octavian)" },
+    { clue:"This 1215 document limited the power of the English king.", ans:"Magna Carta" },
+    { clue:"The empire that fell in 476 AD, traditionally marking the end of the ancient world.", ans:"The Western Roman Empire" },
+    { clue:"Napoleon was exiled to this island after Waterloo.", ans:"Saint Helena" },
+    { clue:"The wall built in 1961 to divide East and West Berlin.", ans:"The Berlin Wall" },
+    { clue:"She was the last active ruler of the Ptolemaic Kingdom of Egypt.", ans:"Cleopatra" },
+    { clue:"This 1789 event in France is associated with the storming of the Bastille.", ans:"The French Revolution" },
+    { clue:"He led the Indian independence movement through nonviolent resistance.", ans:"Mahatma Gandhi" },
+  ],
+};
+
+// Combine all
+flashDecks.all = Object.values(flashDecks).flat();
+
+// ===================== BOARD =====================
+let score = 0, correct = 0, attempted = 0;
+let currentCell = null;
+const answered = new Set();
+
+function buildBoard() {
+  const board = document.getElementById('game-board');
+  board.innerHTML = '';
+  boardData.categories.forEach(cat => {
+    const h = document.createElement('div');
+    h.className = 'category-header';
+    h.textContent = cat;
+    board.appendChild(h);
+  });
+  for (let row = 0; row < 5; row++) {
+    boardData.clues.forEach((col, ci) => {
+      const cell = document.createElement('div');
+      const key = `${ci}-${row}`;
+      cell.className = 'clue-cell' + (answered.has(key) ? ' answered' : '');
+      cell.textContent = answered.has(key) ? '' : `$${col[row].v}`;
+      if (!answered.has(key)) {
+        cell.onclick = () => openModal(ci, row, key);
+      }
+      board.appendChild(cell);
+    });
+  }
+}
+
+function openModal(ci, row, key) {
+  currentCell = { ci, row, key };
+  const item = boardData.clues[ci][row];
+  document.getElementById('modal-category').textContent = boardData.categories[ci];
+  document.getElementById('modal-value').textContent = `$${item.v}`;
+  document.getElementById('modal-clue').textContent = item.clue;
+  document.getElementById('modal-answer').textContent = item.ans;
+  document.getElementById('modal-answer-area').classList.remove('show');
+  document.getElementById('modal-btn-row').innerHTML = '<button class="btn btn-gold" onclick="revealAnswer()">Reveal Answer</button>';
+  document.getElementById('modal').classList.add('open');
+}
+
+function revealAnswer() {
+  document.getElementById('modal-answer-area').classList.add('show');
+  document.getElementById('modal-btn-row').innerHTML = '';
+}
+
+function markResult(wasCorrect) {
+  if (!currentCell) return;
+  attempted++;
+  const item = boardData.clues[currentCell.ci][currentCell.row];
+  if (wasCorrect) {
+    score += item.v;
+    correct++;
+    showFeedback('correct', `+$${item.v}`);
+  } else {
+    score -= item.v;
+    showFeedback('wrong', `-$${item.v}`);
+  }
+  document.getElementById('score-display').textContent = (score < 0 ? '-$' + Math.abs(score) : '$' + score);
+  document.getElementById('ratio-display').textContent = `${correct} / ${attempted}`;
+  answered.add(currentCell.key);
+  closeModalDirect();
+  buildBoard();
+}
+
+function showFeedback(type, msg) {
+  const el = document.getElementById('feedback');
+  el.className = `feedback ${type} show`;
+  el.textContent = msg;
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal').classList.remove('open');
+  currentCell = null;
+}
+
+function resetBoard() {
+  score = 0; correct = 0; attempted = 0;
+  answered.clear();
+  document.getElementById('score-display').textContent = '$0';
+  document.getElementById('ratio-display').textContent = '0 / 0';
+  buildBoard();
+}
+
+// ===================== FLASH CARDS =====================
+let flashCards = [];
+let flashIndex = 0;
+
+function loadFlash() {
+  const cat = document.getElementById('flash-category').value;
+  flashCards = [...(flashDecks[cat] || flashDecks.all)];
+  flashIndex = 0;
+  renderFlash();
+}
+
+function shuffleFlash() {
+  for (let i = flashCards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [flashCards[i], flashCards[j]] = [flashCards[j], flashCards[i]];
+  }
+  flashIndex = 0;
+  renderFlash();
+}
+
+function renderFlash() {
+  if (!flashCards.length) return;
+  const card = flashCards[flashIndex];
+  document.getElementById('flash-clue').textContent = card.clue;
+  document.getElementById('flash-q').textContent = card.clue;
+  document.getElementById('flash-ans').textContent = card.ans;
+  document.getElementById('flash-count').textContent = `${flashIndex + 1} / ${flashCards.length}`;
+  document.getElementById('flash-card').classList.remove('flipped');
+}
+
+function flipFlash() {
+  document.getElementById('flash-card').classList.toggle('flipped');
+}
+function nextFlash() {
+  flashIndex = (flashIndex + 1) % flashCards.length;
+  renderFlash();
+}
+function prevFlash() {
+  flashIndex = (flashIndex - 1 + flashCards.length) % flashCards.length;
+  renderFlash();
+}
+
+// ===================== NAV =====================
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===================== INIT =====================
+buildBoard();
+loadFlash();
+</script>
+</body>
+</html>
